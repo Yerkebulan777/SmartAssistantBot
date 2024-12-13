@@ -46,9 +46,9 @@ public abstract class BaseAssistant : IAiService, IDisposable
 
         if (!Directory.Exists(sessionDir))
         {
-            Directory.CreateDirectory(sessionDir);
+            _ = Directory.CreateDirectory(sessionDir);
         }
-        
+
         _parameters = GetModelParameters(config.Value);
 
         _statePath = Path.Combine(sessionDir, $"session_{DateTime.Now:yyyyMMdd_HHmmss}");
@@ -98,11 +98,11 @@ public abstract class BaseAssistant : IAiService, IDisposable
 
             StringBuilder response = new();
 
-            response.AppendLine($"### {AuthorRole.User}: {userInput}");
+            _ = response.AppendLine($"### {AuthorRole.User}: {userInput}");
 
             await foreach (string text in currentSession.ChatAsync(message, GetDefaultInferenceParams()))
             {
-                response.AppendLine($"### {AuthorRole.Assistant}: {text}");
+                _ = response.AppendLine($"### {AuthorRole.Assistant}: {text}");
             }
 
             currentSession.SaveSession(_statePath);
@@ -134,7 +134,7 @@ public abstract class BaseAssistant : IAiService, IDisposable
 
             await foreach (string text in currentSession.RegenerateAssistantMessageAsync(GetDefaultInferenceParams()))
             {
-                response.AppendLine($"### {AuthorRole.Assistant}: {text}");
+                _ = response.AppendLine($"### {AuthorRole.Assistant}: {text}");
             }
 
             currentSession.SaveSession(_statePath);

@@ -11,13 +11,13 @@ namespace SmartAssistantBot.Models;
 public abstract class BaseAssistant : IAiService, IDisposable
 {
     private readonly string _statePath;
+
     private readonly ModelParams _parameters;
-    private readonly ILogger<BaseAssistant> _logger;
 
     private ChatSession? currentSession;
 
     protected abstract string SystemPrompt { get; }
-
+    protected ILogger<BaseAssistant> Logger { get; }
     protected abstract ModelParams GetModelParameters(BotConfiguration config);
 
     protected virtual InferenceParams GetDefaultInferenceParams()
@@ -33,7 +33,7 @@ public abstract class BaseAssistant : IAiService, IDisposable
 
     protected BaseAssistant(ILogger<BaseAssistant> logger, IOptions<BotConfiguration> config)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         if (config?.Value is null)
         {
@@ -71,11 +71,11 @@ public abstract class BaseAssistant : IAiService, IDisposable
             currentSession = new(executor, chatHistory);
             currentSession.SaveSession(_statePath);
 
-            _logger.LogInformation($"Сессия успешно инициализирована. Путь к сессии: {_statePath}");
+            Logger.LogInformation($"Сессия успешно инициализирована. Путь к сессии: {_statePath}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка инициализации сессии");
+            Logger.LogError(ex, "Ошибка инициализации сессии");
             throw;
         }
     }
@@ -83,7 +83,7 @@ public abstract class BaseAssistant : IAiService, IDisposable
 
     public async Task<string> GetResponse(long chatId, string userInput)
     {
-        _logger.LogDebug("Обработка сообщения в чате {ChatId}", chatId);
+        Logger.LogDebug("Обработка сообщения в чате {ChatId}", chatId);
 
         try
         {
@@ -111,7 +111,7 @@ public abstract class BaseAssistant : IAiService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка генерации ответа для чата {ChatId}", chatId);
+            Logger.LogError(ex, "Ошибка генерации ответа для чата {ChatId}", chatId);
             throw;
         }
     }
@@ -119,7 +119,7 @@ public abstract class BaseAssistant : IAiService, IDisposable
 
     public async Task<string> RegenerateLastResponse(long chatId)
     {
-        _logger.LogDebug("Повторная генерация ответа в чате {ChatId}", chatId);
+        Logger.LogDebug("Повторная генерация ответа в чате {ChatId}", chatId);
 
         try
         {
@@ -143,7 +143,7 @@ public abstract class BaseAssistant : IAiService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка повторной генерации ответа в чате {ChatId}", chatId);
+            Logger.LogError(ex, "Ошибка повторной генерации ответа в чате {ChatId}", chatId);
             throw;
         }
     }
@@ -158,7 +158,7 @@ public abstract class BaseAssistant : IAiService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка освобождения ресурсов");
+            Logger.LogError(ex, "Ошибка освобождения ресурсов");
         }
     }
 

@@ -5,7 +5,7 @@ using SmartAssistantBot.Core;
 
 
 namespace SmartAssistantBot.Models;
-public class TranslatorAssistant : BaseAssistant
+public sealed class TranslatorAssistant : BaseAssistant
 {
     protected override string SystemPrompt => 
     @"Вы опытный помощник по программированию, специализирующийся на:
@@ -19,6 +19,8 @@ public class TranslatorAssistant : BaseAssistant
 
     protected override ModelParams GetModelParameters(BotConfiguration config)
     {
+        Logger?.LogDebug("Инициализация модели. Путь: {ModelPath}", config.CodingModelPath);
+
         if (string.IsNullOrEmpty(config.TranslatorModelPath))
         {
             throw new ArgumentNullException("modelPath");
@@ -48,11 +50,10 @@ public class TranslatorAssistant : BaseAssistant
     }
 
 
-    public TranslatorAssistant(ILogger<CodingAssistant> logger, IOptions<BotConfiguration> config) : base(logger, config)
+    public TranslatorAssistant(ILogger<TranslatorAssistant> logger, IOptions<BotConfiguration> config) : base(logger, config)
     {
         /// Реализация конструктора в абстрактном классе
     }
-
 
 
 }

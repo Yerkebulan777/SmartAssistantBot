@@ -19,9 +19,11 @@ public sealed class CodingAssistant : BaseAssistant
 
     protected override ModelParams GetModelParameters(BotConfiguration config)
     {
+        Logger?.LogDebug("Инициализация модели. Путь: {ModelPath}", config.CodingModelPath);
+
         if (string.IsNullOrEmpty(config.CodingModelPath))
         {
-            throw new ArgumentNullException("modelPath"); 
+            throw new ArgumentNullException("modelPath");
         }
 
         return new ModelParams(config.CodingModelPath)
@@ -52,5 +54,6 @@ public sealed class CodingAssistant : BaseAssistant
     {
         /// Реализация конструктора в абстрактном классе
     }
+
 
 }

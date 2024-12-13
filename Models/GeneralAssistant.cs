@@ -19,6 +19,8 @@ public sealed class GeneralAssistant : BaseAssistant
 
     protected override ModelParams GetModelParameters(BotConfiguration config)
     {
+        Logger?.LogDebug("Инициализация модели. Путь: {ModelPath}", config.CodingModelPath);
+
         if (string.IsNullOrEmpty(config.GeneralModelPath))
         {
             throw new ArgumentNullException("modelPath");
@@ -47,9 +49,12 @@ public sealed class GeneralAssistant : BaseAssistant
         return baseParams;
     }
 
-    public GeneralAssistant(ILogger<CodingAssistant> logger, IOptions<BotConfiguration> config) : base(logger, config)
+
+    public GeneralAssistant(ILogger<GeneralAssistant> logger, IOptions<BotConfiguration> config) : base(logger, config)
     {
         /// Реализация конструктора в абстрактном классе
     }
+
+
 }
 

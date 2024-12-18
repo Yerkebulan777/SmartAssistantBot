@@ -24,6 +24,7 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.Configure<BotConfiguration>(context.Configuration.GetSection("BotConfiguration"));
 
         services.AddHttpClient("telegram_bot_client").RemoveAllLoggers()
+
             .AddTypedClient<ITelegramBotClient>((httpClient, sp) =>
             {
                 BotConfiguration? botConfiguration = sp.GetService<IOptions<BotConfiguration>>()?.Value;

@@ -32,8 +32,8 @@ IHost host = Host.CreateDefaultBuilder(args)
 
         // AI Services
         services.AddScoped<IAiService, TranslatorAssistant>();
-        services.AddScoped<IAiService, GeneralAssistant>();
-        services.AddScoped<IAiService, CodingAssistant>();
+        //services.AddScoped<IAiService, GeneralAssistant>();
+        //services.AddScoped<IAiService, CodingAssistant>();
 
         // UpdateHandlerServices
         services.AddScoped<UpdateHandler>();

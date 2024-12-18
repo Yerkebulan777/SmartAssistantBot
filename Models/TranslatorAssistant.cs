@@ -19,7 +19,7 @@ public sealed class TranslatorAssistant : BaseAssistant
 
     protected override ModelParams GetModelParameters(BotConfiguration config)
     {
-        Logger?.LogDebug("Инициализация модели. Путь: {ModelPath}", config.CodingModelPath);
+        Logger?.LogDebug("Инициализация модели. Путь: {ModelPath}", config.TranslatorModelPath);
 
         if (string.IsNullOrEmpty(config.TranslatorModelPath))
         {

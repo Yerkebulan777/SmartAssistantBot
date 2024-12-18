@@ -19,7 +19,7 @@ public sealed class GeneralAssistant : BaseAssistant
 
     protected override ModelParams GetModelParameters(BotConfiguration config)
     {
-        Logger?.LogDebug("Инициализация модели. Путь: {ModelPath}", config.CodingModelPath);
+        Logger?.LogDebug("Инициализация модели. Путь: {ModelPath}", config.GeneralModelPath);
 
         if (string.IsNullOrEmpty(config.GeneralModelPath))
         {

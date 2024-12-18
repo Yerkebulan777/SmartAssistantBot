@@ -41,7 +41,7 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<PollingService>();
 
     })
-    .UseSerilog((context, services, configuration) => configuration
+    .UseSerilog((context, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext())
     .Build();

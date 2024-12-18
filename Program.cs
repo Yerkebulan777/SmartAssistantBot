@@ -7,16 +7,7 @@ using SmartAssistantBot.Services;
 using Telegram.Bot;
 
 
-const string logPath = "logs/telegramBot.txt";
-
 IHost host = Host.CreateDefaultBuilder(args)
-
-    .UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .WriteTo.Console()
-        .WriteTo.File(logPath)
-        .Enrich.FromLogContext())
 
     .ConfigureServices((context, services) =>
     {
@@ -50,6 +41,9 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<PollingService>();
 
     })
+    .UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.FromLogContext())
     .Build();
 
 await host.RunAsync();

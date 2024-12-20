@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
 using SmartAssistantBot.Core;
 using SmartAssistantBot.Interfaces;
 using SmartAssistantBot.Models;
@@ -8,6 +10,18 @@ using Telegram.Bot;
 
 
 IHost host = Host.CreateDefaultBuilder(args)
+
+    .UseSerilog((context, configuration) => configuration
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .WriteTo.Async(a => a.Console(theme: AnsiConsoleTheme.Code))
+    .WriteTo.Async(a => a.File(
+        path: "logs/telegramBot-.txt",
+        rollingInterval: RollingInterval.Day,
+        shared: true))
+    .Enrich.FromLogContext()
+    .Enrich.WithThreadId())
 
     .ConfigureServices((context, services) =>
     {
@@ -24,27 +38,22 @@ IHost host = Host.CreateDefaultBuilder(args)
                 return new TelegramBotClient(options, httpClient);
             });
 
-        // HandlerServices
+        // Handlers
         services.AddScoped<IKeyboardHandler, KeyboardHandler>();
-
-        // MessageService
         services.AddScoped<IMessageHandler, MessageHandler>();
 
-        // AI Services
+        // AI services
         services.AddScoped<IAiService, TranslatorAssistant>();
         services.AddScoped<IAiService, GeneralAssistant>();
         services.AddScoped<IAiService, CodingAssistant>();
 
-        // UpdateHandlerServices
+        // TelegramBot services
         services.AddScoped<UpdateHandler>();
         services.AddScoped<ReceiverService>();
         services.AddHostedService<PollingService>();
 
     })
 
-    .UseSerilog((context, configuration) => configuration
-    .ReadFrom.Configuration(context.Configuration)
-    .Enrich.FromLogContext())
     .Build();
 
 await host.RunAsync();

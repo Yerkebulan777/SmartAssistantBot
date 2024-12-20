@@ -12,16 +12,15 @@ using Telegram.Bot;
 IHost host = Host.CreateDefaultBuilder(args)
 
     .UseSerilog((context, configuration) => configuration
-    .MinimumLevel.Debug()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("System", LogEventLevel.Warning)
-    .WriteTo.Async(a => a.Console(theme: AnsiConsoleTheme.Code))
-    .WriteTo.Async(a => a.File(
-        path: "logs/telegramBot-.txt",
-        rollingInterval: RollingInterval.Day,
-        shared: true))
-    .Enrich.FromLogContext()
-    .Enrich.WithThreadId())
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .MinimumLevel.Override("System", LogEventLevel.Warning)
+        .WriteTo.Async(a => a.Console(theme: AnsiConsoleTheme.Code))
+        .WriteTo.Async(a => a.File(
+            path: "Logs/telegramBot-.txt",
+            rollingInterval: RollingInterval.Day,
+            shared: true))
+        .Enrich.FromLogContext()
+        .Enrich.WithThreadId())
 
     .ConfigureServices((context, services) =>
     {

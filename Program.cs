@@ -55,7 +55,6 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<PollingService>();
 
     })
-
     .Build();
 
 await host.RunAsync();

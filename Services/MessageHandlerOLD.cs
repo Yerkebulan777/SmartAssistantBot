@@ -6,7 +6,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 
 namespace SmartAssistantBot.Services;
-public class MessageHandler : IMessageHandler
+public class MessageHandlerOLD : IMessageHandler
 {
     private readonly ILogger<MessageHandler> _logger;
     private readonly IKeyboardHandler _keyboardHandler;
@@ -14,7 +14,7 @@ public class MessageHandler : IMessageHandler
     private readonly IAiService _service;
 
 
-    public MessageHandler(ITelegramBotClient botClient, ILogger<MessageHandler> logger, IKeyboardHandler handler, IAiService service)
+    public MessageHandlerOLD(ITelegramBotClient botClient, ILogger<MessageHandler> logger, IKeyboardHandler handler, IAiService service)
     {
         _keyboardHandler = handler;
         _botClient = botClient;

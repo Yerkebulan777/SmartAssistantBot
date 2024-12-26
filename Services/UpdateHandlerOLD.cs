@@ -7,7 +7,7 @@ using Telegram.Bot.Types.Enums;
 
 
 namespace SmartAssistantBot.Services;
-public class UpdateHandler : IUpdateHandler
+public class UpdateHandlerOLD : IUpdateHandler
 {
     private const int delayMilliseconds = 1500;
     private readonly ILogger<UpdateHandler> _logger;
@@ -15,7 +15,7 @@ public class UpdateHandler : IUpdateHandler
     private readonly IKeyboardHandler _keyboardHandler;
 
 
-    public UpdateHandler(ILogger<UpdateHandler> logger, IMessageHandler messageHandler, IKeyboardHandler keyboardHandler)
+    public UpdateHandlerOLD(ILogger<UpdateHandler> logger, IMessageHandler messageHandler, IKeyboardHandler keyboardHandler)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _messageHandler = messageHandler ?? throw new ArgumentNullException(nameof(messageHandler));

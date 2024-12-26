@@ -61,7 +61,7 @@ public class MessageHandler : IMessageHandler
 
         List<string> buttons = ["Переводчик", "Програмист", "Нейросеть"];
 
-        return await _keyboardHandler.SendSingleRowKeyboard(msg, text, buttons);
+        return await _keyboardHandler.SendSingleRowReplyKeyboard(msg, text, buttons);
     }
 
 

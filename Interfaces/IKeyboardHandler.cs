@@ -11,16 +11,16 @@ public interface IKeyboardHandler
     /// <param name="text">Текст сообщения</param>
     /// <param name="buttonTexts">Список текстов для кнопок одного ряда</param>
     /// <returns>Отправленное сообщение с клавиатурой</returns>
-    Task<Message> SendSingleRowKeyboard(Message msg, string text, List<string> buttonTexts);
+    Task<Message> SendSingleRowReplyKeyboard(Message msg, string text, List<string> buttonTexts);
 
     /// <summary>
     /// Отправляет инлайн клавиатуру.
     /// </summary>
     /// <param name="msg">Сообщение, на основе которого будет отправлена клавиатура</param>
-    /// <param name="buttonTextAndCallbackData">Словарь с текстами кнопок и их callback-данными</param>
-    /// <param name="buttonsPerRow">Количество кнопок в одном ряду (по умолчанию 2)</param>
+    /// /// <param name="baseText">Текст сообщения</param>
+    /// <param name="textAndCallbackData">Словарь с текстами кнопок и их callback-данными</param>
     /// <returns>Отправленное сообщение с клавиатурой</returns>
-    Task<Message> SendInlineKeyboard(Message msg, Dictionary<string, string> buttonTextAndCallbackData, int buttonsPerRow = 2);
+    Task<Message> SendInlineColumnKeyboard(Message msg, string baseText, Dictionary<string, string> textAndCallbackData);
 
     /// <summary>
     /// Обрабатывает callback запросы от инлайн-кнопок.

@@ -4,21 +4,16 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
 
+
 namespace SmartAssistantBot.Services;
+
 public class KeyboardHandler(ITelegramBotClient bot, ILogger<KeyboardHandler> logger) : IKeyboardHandler
 {
-    private const int maxButtonsPerRow = 5;
     private readonly ITelegramBotClient _bot = bot ?? throw new ArgumentNullException(nameof(bot));
     private readonly ILogger<KeyboardHandler> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
 
-    /// <summary>
-    /// Отправляет клавиатуру с одним рядом кнопок.
-    /// </summary>
-    /// <param name="msg">Сообщение, на основе которого будет отправлена клавиатура</param>
-    /// <param name="buttonTexts">Список текстов для кнопок одного ряда</param>
-    /// <returns>Отправленное сообщение с клавиатурой</returns>
-    public async Task<Message> SendSingleRowKeyboard(Message msg, string text, List<string> buttonTexts)
+    public async Task<Message> SendSingleRowReplyKeyboard(Message msg, string baseText, List<string> buttonTexts)
     {
         KeyboardButton[] buttons = buttonTexts
             .Where(text => !string.IsNullOrEmpty(text))
@@ -27,73 +22,33 @@ public class KeyboardHandler(ITelegramBotClient bot, ILogger<KeyboardHandler> lo
 
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(true).AddNewRow(buttons);
 
-        return await _bot.SendMessage(msg.Chat, text: text, replyMarkup: replyMarkup);
+        return await _bot.SendMessage(msg.Chat, text: baseText, replyMarkup: replyMarkup);
     }
 
 
-    /// <summary>
-    /// Отправляет инлайн клавиатуру.
-    /// </summary>
-    public async Task<Message> SendInlineKeyboard(Message msg, Dictionary<string, string> buttonTextAndCallbackData, int buttonsPerRow = 2)
+    public async Task<Message> SendInlineColumnKeyboard(Message msg, string baseText, Dictionary<string, string> textAndCallbackData)
     {
-        if (buttonTextAndCallbackData == null || !buttonTextAndCallbackData.Any())
-        {
-            throw new ArgumentException("Словарь кнопок не может быть пустым", nameof(buttonTextAndCallbackData));
-        }
-
-        if (buttonsPerRow is > maxButtonsPerRow or < 1)
-        {
-            throw new ArgumentException($"Количество кнопок в ряду должно быть от 1 до {maxButtonsPerRow}", nameof(buttonsPerRow));
-        }
-
         InlineKeyboardMarkup inlineMarkup = new();
-        List<(string text, string data)> currentRow = [];
 
-        foreach ((string text, string callbackData) in buttonTextAndCallbackData)
+        foreach ((string btnTxt, string callbackData) in textAndCallbackData)
         {
-            if (!string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(callbackData))
+            if (!string.IsNullOrEmpty(btnTxt) && !string.IsNullOrEmpty(callbackData))
             {
-                currentRow.Add((text, callbackData));
-                if (currentRow.Count >= buttonsPerRow)
-                {
-                    _ = inlineMarkup.AddNewRow(currentRow.Select(x =>
-                        InlineKeyboardButton.WithCallbackData(x.text, x.data)).ToArray());
-                    currentRow.Clear();
-                }
+                inlineMarkup.AddNewRow([InlineKeyboardButton.WithCallbackData(btnTxt, callbackData)]);
             }
         }
 
-        if (currentRow.Any())
-        {
-            _ = inlineMarkup.AddNewRow(currentRow.Select(x =>
-                InlineKeyboardButton.WithCallbackData(x.text, x.data)).ToArray());
-        }
-
-        return await _bot.SendMessage(msg.Chat, "Inline buttons:", replyMarkup: inlineMarkup);
+        return await _bot.SendMessage(msg.Chat, baseText, replyMarkup: inlineMarkup);
     }
 
 
     public async Task OnCallbackQuery(CallbackQuery callbackQuery)
     {
-        try
-        {
-            _logger.LogDebug($"Обработка callback запроса: {callbackQuery.Data}");
+        _logger.LogDebug($"Обработка callback запроса: {callbackQuery.Data}");
 
-            await _bot.AnswerCallbackQuery(
-                callbackQueryId: callbackQuery.Id,
-                text: $"Received {callbackQuery.Data}");
+        await _bot.AnswerCallbackQuery(callbackQuery.Id, $"Получено {callbackQuery.Data}");
 
-            if (callbackQuery.Message != null)
-            {
-                _ = await _bot.SendMessage(
-                    chatId: callbackQuery.Message.Chat.Id,
-                    text: $"Received {callbackQuery.Data}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка обработки callback запроса");
-        }
+        await bot.SendMessage(callbackQuery.Message!.Chat, $"Получено {callbackQuery.Data}");
     }
 
 

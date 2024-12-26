@@ -1,74 +1,40 @@
 ﻿using SmartAssistantBot.Interfaces;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
 
-
 namespace SmartAssistantBot.Services;
-public class KeyboardHandler : IKeyboardHandler
+public class KeyboardHandler(ITelegramBotClient bot, ILogger<KeyboardHandler> logger) : IKeyboardHandler
 {
     private const int maxButtonsPerRow = 5;
-    private readonly ITelegramBotClient _botClient;
-    private readonly ILogger<KeyboardHandler> _logger;
+    private readonly ITelegramBotClient _bot = bot ?? throw new ArgumentNullException(nameof(bot));
+    private readonly ILogger<KeyboardHandler> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
 
-    public KeyboardHandler(ILogger<KeyboardHandler> logger, ITelegramBotClient botClient)
+    /// <summary>
+    /// Отправляет клавиатуру с одним рядом кнопок.
+    /// </summary>
+    /// <param name="msg">Сообщение, на основе которого будет отправлена клавиатура</param>
+    /// <param name="buttonTexts">Список текстов для кнопок одного ряда</param>
+    /// <returns>Отправленное сообщение с клавиатурой</returns>
+    public async Task<Message> SendSingleRowKeyboard(Message msg, string text, List<string> buttonTexts)
     {
-        _botClient = botClient ?? throw new ArgumentNullException(nameof(botClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        KeyboardButton[] buttons = buttonTexts
+            .Where(text => !string.IsNullOrEmpty(text))
+            .Select(text => new KeyboardButton(text))
+            .ToArray();
+
+        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(true).AddNewRow(buttons);
+
+        return await _bot.SendMessage(msg.Chat, text: text, replyMarkup: replyMarkup);
     }
 
 
     /// <summary>
-    /// Создает базовую клавиатуру с обычными кнопками.
+    /// Отправляет инлайн клавиатуру.
     /// </summary>
-    /// <param name="buttonTexts">Список текстов для кнопок</param>
-    /// <param name="buttonsPerRow">Количество кнопок в одном ряду (по умолчанию 2)</param>
-    /// <returns>Объект клавиатуры ReplyKeyboardMarkup</returns>
-    /// <exception cref="ArgumentException">Возникает, если список кнопок пуст или превышен лимит кнопок в ряду</exception>
-    public ReplyKeyboardMarkup CreateBasicKeyboard(List<string> buttonTexts, int buttonsPerRow = 3)
-    {
-        if (buttonTexts == null || !buttonTexts.Any())
-        {
-            throw new ArgumentException("Список кнопок не может быть пустым", nameof(buttonTexts));
-        }
-
-        if (buttonsPerRow is > maxButtonsPerRow or < 1)
-        {
-            throw new ArgumentException($"Количество кнопок в ряду должно быть от 1 до {maxButtonsPerRow}", nameof(buttonsPerRow));
-        }
-
-        List<List<KeyboardButton>> buttons = new();
-        List<KeyboardButton> currentRow = new();
-
-        foreach (string? text in buttonTexts.Where(txt => !string.IsNullOrEmpty(txt)))
-        {
-            if (currentRow.Count >= buttonsPerRow)
-            {
-                buttons.Add(currentRow);
-                currentRow = [];
-            }
-
-            currentRow.Add(new KeyboardButton(text));
-        }
-
-        if (currentRow.Any())
-        {
-            buttons.Add(currentRow);
-        }
-
-        return new ReplyKeyboardMarkup(buttons) { ResizeKeyboard = true };
-    }
-
-
-    /// <summary>
-    /// Создает инлайн-клавиатуру с кнопками обратного вызова.
-    /// </summary>
-    /// <param name="buttonTextAndCallbackData">Словарь с текстами кнопок и их callback-данными</param>
-    /// <param name="buttonsPerRow">Количество кнопок в одном ряду (по умолчанию 2)</param>
-    /// <returns>Объект клавиатуры InlineKeyboardMarkup</returns>
-    /// <exception cref="ArgumentException">Возникает, если словарь пуст или превышен лимит кнопок в ряду</exception>
-    public InlineKeyboardMarkup CreateInlineKeyboard(Dictionary<string, string> buttonTextAndCallbackData, int buttonsPerRow = 2)
+    public async Task<Message> SendInlineKeyboard(Message msg, Dictionary<string, string> buttonTextAndCallbackData, int buttonsPerRow = 2)
     {
         if (buttonTextAndCallbackData == null || !buttonTextAndCallbackData.Any())
         {
@@ -80,81 +46,48 @@ public class KeyboardHandler : IKeyboardHandler
             throw new ArgumentException($"Количество кнопок в ряду должно быть от 1 до {maxButtonsPerRow}", nameof(buttonsPerRow));
         }
 
-        List<List<InlineKeyboardButton>> buttons = new();
-        List<InlineKeyboardButton> currentRow = new();
+        InlineKeyboardMarkup inlineMarkup = new();
+        List<(string text, string data)> currentRow = [];
 
         foreach ((string text, string callbackData) in buttonTextAndCallbackData)
         {
-            if (currentRow.Count >= buttonsPerRow)
-            {
-                buttons.Add(currentRow);
-                currentRow = [];
-            }
-
             if (!string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(callbackData))
             {
-                currentRow.Add(InlineKeyboardButton.WithCallbackData(text, callbackData));
+                currentRow.Add((text, callbackData));
+                if (currentRow.Count >= buttonsPerRow)
+                {
+                    _ = inlineMarkup.AddNewRow(currentRow.Select(x =>
+                        InlineKeyboardButton.WithCallbackData(x.text, x.data)).ToArray());
+                    currentRow.Clear();
+                }
             }
         }
 
         if (currentRow.Any())
         {
-            buttons.Add(currentRow);
+            _ = inlineMarkup.AddNewRow(currentRow.Select(x =>
+                InlineKeyboardButton.WithCallbackData(x.text, x.data)).ToArray());
         }
 
-        return new InlineKeyboardMarkup(buttons);
+        return await _bot.SendMessage(msg.Chat, "Inline buttons:", replyMarkup: inlineMarkup);
     }
 
 
-    /// <summary>
-    /// Создает специальную клавиатуру с кнопками запроса контакта и/или локации.
-    /// </summary>
-    /// <param name="requestContact">Флаг для добавления кнопки запроса контакта</param>
-    /// <param name="requestLocation">Флаг для добавления кнопки запроса локации</param>
-    /// <returns>Объект клавиатуры ReplyKeyboardMarkup</returns>
-    public ReplyKeyboardMarkup CreateSpecialKeyboard(bool requestContact = false, bool requestLocation = false)
-    {
-        List<KeyboardButton> buttons = new();
-
-        if (requestContact)
-        {
-            buttons.Add(KeyboardButton.WithRequestContact("Поделиться контактом"));
-        }
-
-        if (requestLocation)
-        {
-            buttons.Add(KeyboardButton.WithRequestLocation("Поделиться локацией"));
-        }
-
-        return new ReplyKeyboardMarkup(new[] { buttons }) { ResizeKeyboard = true };
-    }
-
-
-    /// <summary>
-    /// Удаляет текущую клавиатуру и отправляет сообщение пользователю.
-    /// </summary>
-    /// <param name="chatId">ID чата</param>
-    /// <param name="message">Сообщение для отправки (по умолчанию "Клавиатура удалена")</param>
-    /// <returns>Task</returns>
-    public async Task RemoveKeyboard(long chatId)
-    {
-        _ = await _botClient.SendMessage(chatId: chatId, text: string.Empty, replyMarkup: new ReplyKeyboardRemove());
-    }
-
-
-    public async Task HandleCallbackQuery(CallbackQuery callbackQuery)
+    public async Task OnCallbackQuery(CallbackQuery callbackQuery)
     {
         try
         {
             _logger.LogDebug($"Обработка callback запроса: {callbackQuery.Data}");
 
-            await _botClient.AnswerCallbackQuery(callbackQuery.Id, "Получено!");
+            await _bot.AnswerCallbackQuery(
+                callbackQueryId: callbackQuery.Id,
+                text: $"Received {callbackQuery.Data}");
 
             if (callbackQuery.Message != null)
             {
-                _ = await _botClient.SendMessage(
+                _ = await _bot.SendMessage(
                     chatId: callbackQuery.Message.Chat.Id,
-                    text: $"Вы выбрали: {callbackQuery.Data}");
+                    text: $"Received {callbackQuery.Data}");
             }
         }
         catch (Exception ex)
@@ -164,9 +97,16 @@ public class KeyboardHandler : IKeyboardHandler
     }
 
 
-    public Task HandleInlineQuery(InlineQuery inlineQuery)
+    public async Task OnInlineQuery(InlineQuery inlineQuery)
     {
-        throw new NotImplementedException();
+        _logger.LogInformation("Received inline query from: {InlineQueryFromId}", inlineQuery.From.Id);
+
+        InlineQueryResult[] results = [ // displayed result
+            new InlineQueryResultArticle("1", "Telegram.Bot", new InputTextMessageContent("hello")),
+            new InlineQueryResultArticle("2", "is the best", new InputTextMessageContent("world"))
+        ];
+
+        await bot.AnswerInlineQuery(inlineQuery.Id, results, cacheTime: 0, isPersonal: true);
     }
 
 

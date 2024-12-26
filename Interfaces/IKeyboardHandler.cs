@@ -1,49 +1,37 @@
 ﻿using Telegram.Bot.Types;
-using Telegram.Bot.Types.ReplyMarkups;
-
 
 namespace SmartAssistantBot.Interfaces;
+
 public interface IKeyboardHandler
 {
     /// <summary>
-    /// Создает базовую клавиатуру с обычными кнопками.
+    /// Отправляет клавиатуру с одним рядом кнопок.
     /// </summary>
-    /// <param name="buttonTexts">Список текстов для кнопок</param>
-    /// <param name="buttonsPerRow">Количество кнопок в одном ряду</param>
-    /// <returns>Объект клавиатуры ReplyKeyboardMarkup</returns>
-    ReplyKeyboardMarkup CreateBasicKeyboard(List<string> buttonTexts, int buttonsPerRow = 2);
+    /// <param name="msg">Сообщение, на основе которого будет отправлена клавиатура</param>
+    /// <param name="text">Текст сообщения</param>
+    /// <param name="buttonTexts">Список текстов для кнопок одного ряда</param>
+    /// <returns>Отправленное сообщение с клавиатурой</returns>
+    Task<Message> SendSingleRowKeyboard(Message msg, string text, List<string> buttonTexts);
 
     /// <summary>
-    /// Создает инлайн-клавиатуру с кнопками обратного вызова.
+    /// Отправляет инлайн клавиатуру.
     /// </summary>
+    /// <param name="msg">Сообщение, на основе которого будет отправлена клавиатура</param>
     /// <param name="buttonTextAndCallbackData">Словарь с текстами кнопок и их callback-данными</param>
-    /// <param name="buttonsPerRow">Количество кнопок в одном ряду</param>
-    /// <returns>Объект клавиатуры InlineKeyboardMarkup</returns>
-    InlineKeyboardMarkup CreateInlineKeyboard(Dictionary<string, string> buttonTextAndCallbackData, int buttonsPerRow = 2);
+    /// <param name="buttonsPerRow">Количество кнопок в одном ряду (по умолчанию 2)</param>
+    /// <returns>Отправленное сообщение с клавиатурой</returns>
+    Task<Message> SendInlineKeyboard(Message msg, Dictionary<string, string> buttonTextAndCallbackData, int buttonsPerRow = 2);
 
     /// <summary>
-    /// Создает специальную клавиатуру с кнопками запроса контакта и/или локации.
+    /// Обрабатывает callback запросы от инлайн-кнопок.
     /// </summary>
-    /// <param name="requestContact">Флаг для добавления кнопки запроса контакта</param>
-    /// <param name="requestLocation">Флаг для добавления кнопки запроса локации</param>
-    /// <returns>Объект клавиатуры ReplyKeyboardMarkup</returns>
-    ReplyKeyboardMarkup CreateSpecialKeyboard(bool requestContact = false, bool requestLocation = false);
-
-
-    Task HandleCallbackQuery(CallbackQuery callbackQuery);
-
-
-    Task HandleInlineQuery(InlineQuery inlineQuery);
-
-
-    /// <summary>
-    /// Удаляет текущую клавиатуру
-    /// </summary>
-    /// <param name="chatId">ID чата</param>
-    /// <param name="message">Сообщение для отправки</param>
+    /// <param name="callbackQuery">Объект callback запроса</param>
     /// <returns>Task</returns>
-    Task RemoveKeyboard(long chatId);
+    Task OnCallbackQuery(CallbackQuery callbackQuery);
 
-
-
+    /// <summary>
+    /// Обрабатывает инлайн-запросы.
+    /// </summary>
+    /// <param name="inlineQuery">Объект инлайн-запроса</param>
+    Task OnInlineQuery(InlineQuery inlineQuery);
 }

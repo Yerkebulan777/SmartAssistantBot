@@ -11,6 +11,6 @@ namespace SmartAssistantBot.Interfaces
         /// <summary>
         /// Обработка команд
         /// </summary>
-        Task<Message> HandleCommand(Message message, CancellationToken cancellationToken);
+        Task<Message> OnMessage(Message message, CancellationToken cancellationToken);
     }
 }

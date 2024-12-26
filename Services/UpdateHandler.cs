@@ -7,20 +7,11 @@ using Telegram.Bot.Types.Enums;
 
 
 namespace SmartAssistantBot.Services;
-public class UpdateHandler : IUpdateHandler
+public class UpdateHandler(ILogger<UpdateHandler> logger, IMessageHandler msgHandler, IKeyboardHandler kbrHandler) : IUpdateHandler
 {
-    private const int delayMilliseconds = 1500;
-    private readonly ILogger<UpdateHandler> _logger;
-    private readonly IMessageHandler _messageHandler;
-    private readonly IKeyboardHandler _keyboardHandler;
-
-
-    public UpdateHandler(ILogger<UpdateHandler> logger, IMessageHandler messageHandler, IKeyboardHandler keyboardHandler)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _messageHandler = messageHandler ?? throw new ArgumentNullException(nameof(messageHandler));
-        _keyboardHandler = keyboardHandler ?? throw new ArgumentNullException(nameof(keyboardHandler));
-    }
+    private readonly ILogger<UpdateHandler> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly IMessageHandler _messageHandler = msgHandler ?? throw new ArgumentNullException(nameof(msgHandler));
+    private readonly IKeyboardHandler _keyboardHandler = kbrHandler ?? throw new ArgumentNullException(nameof(kbrHandler));
 
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -32,15 +23,18 @@ public class UpdateHandler : IUpdateHandler
             Task handler = update.Type switch
             {
                 UpdateType.Message when update.Message?.Text != null =>
-                    HandleMessageAsync(update.Message, cancellationToken),
+                    _messageHandler.OnMessage(update.Message, cancellationToken),
 
-                UpdateType.CallbackQuery =>
-                    HandleCallbackQueryAsync(update.CallbackQuery!, cancellationToken),
+                UpdateType.EditedMessage when update.EditedMessage?.Text != null =>
+                    _messageHandler.OnMessage(update.EditedMessage, cancellationToken),
 
-                UpdateType.InlineQuery =>
-                    HandleInlineQueryAsync(update.InlineQuery!, cancellationToken),
+                UpdateType.CallbackQuery when update.CallbackQuery != null =>
+                    _keyboardHandler.OnCallbackQuery(update.CallbackQuery),
 
-                _ => UnhandledUpdateTypeAsync(update.Type)
+                UpdateType.InlineQuery when update.InlineQuery != null =>
+                    _keyboardHandler.OnInlineQuery(update.InlineQuery),
+
+                _ => UnknownUpdateHandler(update.Type)
             };
 
             await handler;
@@ -53,190 +47,77 @@ public class UpdateHandler : IUpdateHandler
     }
 
 
-    private string GetUserName(Message message)
+    private Task UnknownUpdateHandler(UpdateType updateType)
     {
-        long chatId = message.Chat.Id;
-        User? user = message.From;
+        _logger.LogWarning($"Unhandled update type: {updateType}");
 
-        if (user is null)
-        {
-            return $"User({chatId})";
-        }
-
-        string userName = user.Username ?? $"{user.FirstName} {user.LastName}";
-
-        return userName.Trim();
+        return Task.CompletedTask;
     }
 
 
-    private async Task HandleMessageAsync(Message message, CancellationToken cancellationToken)
+    #region HandleErrorAsync 
+
+    public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
-        string userName = GetUserName(message);
-
-        _logger.LogInformation($"Received message from: {userName}, text: {message.Text}");
-
         try
         {
-            await _messageHandler.HandleCommand(message, cancellationToken);
+            (string errorMessage, Task handling) = exception switch
+            {
+                ApiRequestException apiException => (
+                    $"Telegram API Error:[{apiException.ErrorCode}] {apiException.Message}",
+                    HandleApiExceptionAsync(apiException, cancellationToken)
+                ),
+
+                RequestException => (
+                    "Network request error occurred",
+                    HandleRequestExceptionAsync(cancellationToken)
+                ),
+
+                TimeoutException => (
+                    "Timeout exceeded. The operation was canceled.",
+                    Task.CompletedTask
+                ),
+
+                TaskCanceledException => (
+                    "Task was cancelled. Operation aborted.",
+                    Task.CompletedTask
+                ),
+
+                _ => (exception.ToString(), Task.CompletedTask)
+            };
+
+            _logger.LogError(exception, $"Source: {source} Error: {errorMessage}");
+            await handling;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing message");
-            throw;
+            _logger.LogError(ex, "Error occurred while handling the original exception");
         }
     }
 
 
-    private async Task HandleCallbackQueryAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
+    private async Task HandleApiExceptionAsync(ApiRequestException exception, CancellationToken cancellationToken)
     {
-        string? user = callbackQuery.From.Username;
-
-        _logger.LogInformation($"Получен callback-запрос от пользователя: {user} : {callbackQuery.Data}");
-
-        // Проверяем, не была ли запрошена отмена операции
-        if (!cancellationToken.IsCancellationRequested)
+        string logMessage = exception.ErrorCode switch
         {
-            try
-            {
-                // Передаем callback-запрос обработчику сообщений
-                await _keyboardHandler.HandleCallbackQuery(callbackQuery);
-            }
-            catch (Exception ex)
-            {
-                // Логируем ошибку, если она возникла при обработке
-                _logger.LogError(ex, "Ошибка при обработке callback-запроса");
-                throw;
-            }
-        }
-    }
-
-
-    private async Task HandleInlineQueryAsync(InlineQuery inlineQuery, CancellationToken cancellationToken)
-    {
-        string? user = inlineQuery.From.Username;
-
-        _logger.LogInformation($"Received inline query. From: {user}, Query: {inlineQuery.Query}");
-
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                await _keyboardHandler.HandleInlineQuery(inlineQuery);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing inline query");
-                throw;
-            }
-        }
-    }
-
-
-    private Task UnhandledUpdateTypeAsync(UpdateType updateType)
-    {
-        _logger.LogWarning($"Unhandled update type: {updateType}");
-        return Task.CompletedTask;
-    }
-
-
-    #region HandleErrorRegion
-
-    public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
-    {
-        string errorMessage = exception switch
-        {
-            ApiRequestException apiRequestException =>
-                $"Telegram API Error:[{apiRequestException.ErrorCode}] {apiRequestException.Message}",
-
-            TimeoutException =>
-                "Timeout exceeded. The operation was canceled.",
-
-            TaskCanceledException =>
-                "Task was cancelled. Operation aborted.",
-
-            _ => exception.ToString()
+            429 => "Rate limit exceeded. Adding delay before retry.",
+            403 => "Bot was blocked by user or lacks necessary permissions",
+            400 => "Invalid request parameters",
+            401 => "Bot token is invalid",
+            404 => "Requested resource not found",
+            _ => $"Unexpected API error: Code {exception.ErrorCode}"
         };
 
-        _logger.LogError(exception, $"Source: {source} Error: {errorMessage}");
+        _logger.LogError(logMessage);
 
-        // Обработка специфических ошибок API
-        if (exception is ApiRequestException apiException)
-        {
-            HandleApiException(apiException, cancellationToken);
-        }
-
-        // Обработка сетевых ошибок
-        else if (exception is RequestException)
-        {
-            HandleRequestException(cancellationToken);
-        }
-
-        return Task.CompletedTask;
+        await Task.Delay(1500, cancellationToken);
     }
 
 
-    public Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+    private async Task HandleRequestExceptionAsync(CancellationToken cancellationToken)
     {
-        string errorMessage = exception switch
-        {
-            ApiRequestException apiRequestException =>
-                $"Ошибка Telegram API: [{apiRequestException.ErrorCode}] {apiRequestException.Message}",
-
-            TimeoutException =>
-                "Превышено время ожидания. Операция была отменена.",
-
-            TaskCanceledException =>
-                "Задача была отменена. Операция прервана.",
-
-            _ => exception.ToString()
-        };
-
-        _logger.LogError(exception, $"Ошибка получения обновлений: {errorMessage}");
-
-        // Обработка специфических исключений API Telegram
-        if (exception is ApiRequestException apiException)
-        {
-            HandleApiException(apiException, cancellationToken);
-        }
-
-        // Обработка сетевых ошибок
-        else if (exception is RequestException)
-        {
-            HandleRequestException(cancellationToken);
-        }
-
-        return Task.CompletedTask;
-    }
-
-
-    private void HandleApiException(ApiRequestException exception, CancellationToken cancellationToken)
-    {
-        switch (exception.ErrorCode)
-        {
-            case 429: // Слишком много запросов
-                _logger.LogError("Превышен лимит запросов. Добавляем задержку.");
-                Task.Delay(5000, cancellationToken).Wait(cancellationToken);
-                break;
-
-            case 403: // Доступ запрещен
-                _logger.LogError("Бот был заблокирован пользователем");
-                break;
-
-            case 400: // Неверный запрос
-                _logger.LogError("Ошибка в запросе");
-                break;
-
-            default:
-                _logger.LogError($"Неожиданная ошибка: Код {exception.ErrorCode}, Сообщение: {exception.Message}");
-                break;
-        }
-    }
-
-
-    private void HandleRequestException(CancellationToken cancellationToken)
-    {
-        _logger.LogWarning("Network error occurred. Implementing delay.");
-        Task.Delay(delayMilliseconds, cancellationToken).Wait(cancellationToken);
+        _logger.LogWarning("Network error occurred. Implementing delay before retry.");
+        await Task.Delay(3000, cancellationToken);
     }
 
     #endregion

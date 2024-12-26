@@ -4,7 +4,6 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
-
 namespace SmartAssistantBot.Services;
 public class MessageHandler : IMessageHandler
 {
@@ -23,49 +22,32 @@ public class MessageHandler : IMessageHandler
     }
 
 
-    public async Task<Message> HandleCommand(Message message, CancellationToken cancellationToken)
+    public async Task<Message> OnMessage(Message message, CancellationToken cancellationToken)
     {
-        // Проверяем, не была ли запрошена отмена операции
         if (!cancellationToken.IsCancellationRequested)
         {
             try
             {
                 string messageText = message.Text!.Trim();
-
                 _logger.LogDebug($"Обработка команды: {messageText}");
 
-                // Обрабатка команд
-                switch (messageText)
+                return messageText switch
                 {
-                    case "/help":
-                        return await SendHelpMessage(message);
-
-                    case "/start":
-                        return await SendStartKeyboard(message);
-
-                    case "/exit":
-                        return await SendStartKeyboard(message);
-
-                    case "Переводчик":
-                        return await HandleTranslatorCommand(message);
-
-                    case "Програмист":
-                        return await HandleProgrammerCommand(message);
-
-                    case "Нейросеть":
-                        return await HandleNeuralNetworkCommand(message);
-
-                    default:
-                        return await SendUnknownCommandMessage(message);
-                }
+                    "/exit" => await SendStartKeyboard(message),
+                    "/start" => await SendStartKeyboard(message),
+                    "Переводчик" => await HandleTranslatorCommand(message),
+                    "Програмист" => await HandleProgrammerCommand(message),
+                    "Нейросеть" => await HandleNeuralNetworkCommand(message),
+                    _ => await SendUsageMessage(message)
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Ошибка обработки команды: {ex.Message}");
 
-                string errorText = $"Произошла ошибка при обработке команды: {ex.Message}!";
+                string text = $"Произошла ошибка при обработке команды: {ex.Message}!";
 
-                return await _botClient.SendMessage(chatId: message.Chat.Id, text: errorText);
+                return await _botClient.SendMessage(chatId: message.Chat.Id, text: text, cancellationToken: cancellationToken);
             }
         }
 
@@ -73,40 +55,27 @@ public class MessageHandler : IMessageHandler
     }
 
 
-    private async Task<Message> SendStartKeyboard(Message message)
+    private async Task<Message> SendStartKeyboard(Message msg)
     {
+        string text = "Добро пожаловать! Я AI бот!\nВыберите команду:";
+
         List<string> buttons = ["Переводчик", "Програмист", "Нейросеть"];
 
-        ReplyKeyboardMarkup keyboard = _keyboardHandler.CreateBasicKeyboard(buttons, buttonsPerRow: 3);
-
-        return await _botClient.SendMessage(
-            chatId: message.Chat.Id,
-            text: "Добро пожаловать! Я AI бот!\nВыберите команду:",
-            replyMarkup: keyboard
-        );
+        return await _keyboardHandler.SendSingleRowKeyboard(msg, text, buttons);
     }
 
 
-    private async Task<Message> SendHelpMessage(Message message)
+    private async Task<Message> SendUsageMessage(Message msg)
     {
-        long chatId = message.Chat.Id;
-
-        const string helpText = """
-            Доступные команды:
+        const string usage = """
+            <b><u>< Бот меню ></u></b>:
             /start - Начать работу с ботом
-            /help - Показать справку
+            /exit - Выход из бота
             """;
 
-        return await _botClient.SendMessage(chatId, helpText);
+        return await _botClient.SendMessage(msg.Chat, usage, parseMode: ParseMode.Html, replyMarkup: new ReplyKeyboardRemove());
     }
 
-
-    private async Task<Message> SendUnknownCommandMessage(Message message)
-    {
-        long chatId = message.Chat.Id;
-        string text = "Используйте /help.";
-        return await _botClient.SendMessage(chatId, text);
-    }
 
 
     private Task<Message> HandleProgrammerCommand(Message message)
@@ -134,12 +103,12 @@ public class MessageHandler : IMessageHandler
         try
         {
             string result = await _service.GetResponse(chatId, message.Text!.Trim());
-            return await _botClient.SendMessage(chatId, $"```\n{result}\n```", ParseMode.MarkdownV2);
+            return await _botClient.SendMessage(chatId: chatId, text: $"```\n{result}\n```", parseMode: ParseMode.MarkdownV2);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Ошибка {ex.Message}");
-            return await _botClient.SendMessage(chatId, $"Ошибка {ex.Message}");
+            return await _botClient.SendMessage(chatId: chatId, text: $"Ошибка {ex.Message}");
         }
     }
 

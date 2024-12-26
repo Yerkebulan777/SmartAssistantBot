@@ -34,7 +34,7 @@ public class KeyboardHandler(ITelegramBotClient bot, ILogger<KeyboardHandler> lo
         {
             if (!string.IsNullOrEmpty(btnTxt) && !string.IsNullOrEmpty(callbackData))
             {
-                inlineMarkup.AddNewRow([InlineKeyboardButton.WithCallbackData(btnTxt, callbackData)]);
+                _ = inlineMarkup.AddNewRow([InlineKeyboardButton.WithCallbackData(btnTxt, callbackData)]);
             }
         }
 
@@ -46,22 +46,56 @@ public class KeyboardHandler(ITelegramBotClient bot, ILogger<KeyboardHandler> lo
     {
         _logger.LogDebug($"Обработка callback запроса: {callbackQuery.Data}");
 
-        await _bot.AnswerCallbackQuery(callbackQuery.Id, $"Получено {callbackQuery.Data}");
+        await _bot.AnswerCallbackQuery(callbackQuery.Id, $"Выбрано: {callbackQuery.Data}");
 
-        await bot.SendMessage(callbackQuery.Message!.Chat, $"Получено {callbackQuery.Data}");
+        Chat? chat = callbackQuery.Message?.Chat;
+
+        switch (callbackQuery.Data) 
+        {
+            case "settings_notifications":
+                await _bot.SendMessage(chat!, "Настройки уведомлений:");
+                break;
+
+            case "settings_language":
+                await _bot.SendMessage(chat!, "Выберите язык:");
+                break;
+
+            case "settings_general":
+                await _bot.SendMessage(chat!, "Общие настройки:");
+                break;
+
+            default:
+                await bot.SendMessage(callbackQuery.Message!.Chat, $"Получено {callbackQuery.Data}");
+                break;
+
+        }
     }
 
 
+    /// <summary>
+    /// Пример для тестирования
+    /// </summary>
     public async Task OnInlineQuery(InlineQuery inlineQuery)
     {
-        _logger.LogInformation("Received inline query from: {InlineQueryFromId}", inlineQuery.From.Id);
-
-        InlineQueryResult[] results = [ // displayed result
-            new InlineQueryResultArticle("1", "Telegram.Bot", new InputTextMessageContent("hello")),
-            new InlineQueryResultArticle("2", "is the best", new InputTextMessageContent("world"))
+        InlineQueryResult[] results = [
+            new InlineQueryResultArticle(
+            id: "1",
+            title: "Расписание на сегодня",
+            new InputTextMessageContent("📅 Расписание на сегодня:\n9:00 - Встреча команды\n13:00 - Обед\n15:00 - Презентация")
+        ),
+        new InlineQueryResultArticle(
+            id: "2",
+            title: "Контакты поддержки",
+            new InputTextMessageContent("📞 Служба поддержки:\nТелефон: +7 (999) 123-45-67\nEmail: support@example.com")
+        ),
+        new InlineQueryResultArticle(
+            id: "3",
+            title: "Часто задаваемые вопросы",
+            new InputTextMessageContent("❓ Популярные вопросы:\n1. Как начать работу?\n2. Где найти документацию?\n3. Как связаться с менеджером?")
+        )
         ];
 
-        await bot.AnswerInlineQuery(inlineQuery.Id, results, cacheTime: 0, isPersonal: true);
+        await bot.AnswerInlineQuery(inlineQuery.Id, results);
     }
 
 

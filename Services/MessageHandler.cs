@@ -131,7 +131,8 @@ public class MessageHandler : IMessageHandler
 
         try
         {
-            output = await _service.GetResponse(message.Chat.Id, message.Text!.Trim());
+            output = "TEST";
+            //output = await _service.GetResponse(message.Chat.Id, message.Text!.Trim());
         }
         catch (Exception ex)
         {
@@ -142,7 +143,7 @@ public class MessageHandler : IMessageHandler
             _logger.LogWarning(output);
         }
 
-        return await _bot.SendMessage(message.Chat, $"```\n{output}\n```", parseMode: ParseMode.MarkdownV2);
+        return await _bot.SendMessage(message.Chat, $"```\n{output}\n```", parseMode: ParseMode.MarkdownV2, replyMarkup: new ReplyKeyboardRemove());
     }
 
     #endregion

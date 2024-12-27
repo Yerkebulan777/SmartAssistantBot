@@ -23,24 +23,24 @@ public class MessageHandler : IMessageHandler
     }
 
 
-    public async Task<Message> OnMessage(Message message, CancellationToken cancellationToken)
+    public async Task<Message> OnMessage(Message msg, CancellationToken cancellationToken)
     {
         if (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                string messageText = message.Text!.Trim();
+                string messageText = msg.Text!.Trim();
 
                 _logger.LogWarning("Обработка команды: {messageText}", messageText);
 
                 return messageText switch
                 {
-                    "/exit" => await SendStartKeyboard(message),
-                    "/start" => await SendStartKeyboard(message),
-                    "Переводчик" => await HandleTranslatorCommand(message),
-                    "Програмист" => await HandleProgrammerCommand(message),
-                    "Нейросеть" => await HandleNeuralNetworkCommand(message),
-                    _ => await SendUsageMessage(message)
+                    "/exit" => await SendStartKeyboard(msg),
+                    "/start" => await SendStartKeyboard(msg),
+                    "Переводчик" => await HandleTranslatorCommand(msg),
+                    "Програмист" => await HandleProgrammerCommand(msg),
+                    "Нейросеть" => await HandleNeuralNetworkCommand(msg),
+                    _ => await SendUsageMessage(msg)
                 };
             }
             catch (Exception ex)
@@ -49,11 +49,11 @@ public class MessageHandler : IMessageHandler
 
                 string text = $"Произошла ошибка при обработке команды: {ex.Message}!";
 
-                return await _bot.SendMessage(chatId: message.Chat.Id, text: text, cancellationToken: cancellationToken);
+                return await _bot.SendMessage(chatId: msg.Chat.Id, text: text, cancellationToken: cancellationToken);
             }
         }
 
-        return message;
+        return msg;
     }
 
 
@@ -79,9 +79,9 @@ public class MessageHandler : IMessageHandler
     }
 
 
-    public async Task SendProgressAnimation(Message message)
+    public async Task SendProgressAnimation(Message msg)
     {
-        Message sentMessage = await _bot.SendMessage(message.Chat, "Загрузка...");
+        Message sentMessage = await _bot.SendMessage(msg.Chat, "Загрузка...");
 
         string[] frames = {
             "⏳ Загрузка   ",
@@ -107,32 +107,32 @@ public class MessageHandler : IMessageHandler
 
     #region CommandHandler
 
-    private Task<Message> HandleProgrammerCommand(Message message)
+    private Task<Message> HandleProgrammerCommand(Message msg)
     {
-        return ResponseHandle(message);
+        return ResponseHandle(msg);
     }
 
 
-    private Task<Message> HandleTranslatorCommand(Message message)
+    private Task<Message> HandleTranslatorCommand(Message msg)
     {
-        return ResponseHandle(message);
+        return ResponseHandle(msg);
     }
 
 
-    private Task<Message> HandleNeuralNetworkCommand(Message message)
+    private Task<Message> HandleNeuralNetworkCommand(Message msg)
     {
-        return ResponseHandle(message);
+        return ResponseHandle(msg);
     }
 
 
-    private async Task<Message> ResponseHandle(Message message)
+    private async Task<Message> ResponseHandle(Message msg)
     {
         string? output = null;
 
         try
         {
             output = "TEST";
-            //output = await _service.GetResponse(message.Chat.Id, message.Text!.Trim());
+            //output = await _service.GetResponse(msg.Chat.Id, msg.Text!.Trim());
         }
         catch (Exception ex)
         {
@@ -143,7 +143,7 @@ public class MessageHandler : IMessageHandler
             _logger.LogWarning(output);
         }
 
-        return await _bot.SendMessage(message.Chat, $"```\n{output}\n```", parseMode: ParseMode.MarkdownV2, replyMarkup: new ReplyKeyboardRemove());
+        return await _bot.SendMessage(msg.Chat, $"```\n{output}\n```", parseMode: ParseMode.MarkdownV2, replyMarkup: new ReplyKeyboardRemove());
     }
 
     #endregion

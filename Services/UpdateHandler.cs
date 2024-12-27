@@ -18,6 +18,8 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, IMessageHandler msgHan
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        _logger.LogInformation("Received update: {UpdateType}", update.Type);
+
         try
         {
             Task handler = update.Type switch

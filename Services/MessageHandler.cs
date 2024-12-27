@@ -17,9 +17,9 @@ public class MessageHandler : IMessageHandler
     public MessageHandler(ITelegramBotClient bot, ILogger<MessageHandler> logger, IKeyboardHandler handler, IAiService service)
     {
         _keyboardHandler = handler;
-        _bot = bot;
         _service = service;
         _logger = logger;
+        _bot = bot;
     }
 
 
@@ -30,7 +30,8 @@ public class MessageHandler : IMessageHandler
             try
             {
                 string messageText = message.Text!.Trim();
-                _logger.LogDebug($"Обработка команды: {messageText}");
+
+                _logger.LogWarning("Обработка команды: {messageText}", messageText);
 
                 return messageText switch
                 {
@@ -108,24 +109,18 @@ public class MessageHandler : IMessageHandler
 
     private Task<Message> HandleProgrammerCommand(Message message)
     {
-        _logger.LogInformation("Обработка команды: Программист");
-
         return ResponseHandle(message);
     }
 
 
     private Task<Message> HandleTranslatorCommand(Message message)
     {
-        _logger.LogInformation("Обработка команды: Переводчик");
-
         return ResponseHandle(message);
     }
 
 
     private Task<Message> HandleNeuralNetworkCommand(Message message)
     {
-        _logger.LogInformation("Обработка команды: Нейросеть");
-
         return ResponseHandle(message);
     }
 

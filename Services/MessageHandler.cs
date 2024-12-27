@@ -95,12 +95,12 @@ public class MessageHandler : IMessageHandler
         {
             foreach (string frame in frames)
             {
-                await _bot.EditMessageText(sentMessage.Chat, msgId, frame);
+                _ = await _bot.EditMessageText(sentMessage.Chat, msgId, frame);
                 await Task.Delay(500);
             }
         }
 
-        await _bot.EditMessageText(sentMessage.Chat, msgId, "✅ Загрузка завершена!");
+        _ = await _bot.EditMessageText(sentMessage.Chat, msgId, "✅ Загрузка завершена!");
     }
 
 
@@ -108,36 +108,46 @@ public class MessageHandler : IMessageHandler
 
     private Task<Message> HandleProgrammerCommand(Message message)
     {
-        return ResponseHandle(message);
-    }
+        _logger.LogInformation("Обработка команды: Программист");
 
-
-    private Task<Message> HandleNeuralNetworkCommand(Message message)
-    {
         return ResponseHandle(message);
     }
 
 
     private Task<Message> HandleTranslatorCommand(Message message)
     {
+        _logger.LogInformation("Обработка команды: Переводчик");
+
+        return ResponseHandle(message);
+    }
+
+
+    private Task<Message> HandleNeuralNetworkCommand(Message message)
+    {
+        _logger.LogInformation("Обработка команды: Нейросеть");
+
         return ResponseHandle(message);
     }
 
 
     private async Task<Message> ResponseHandle(Message message)
     {
-        long chatId = message.Chat.Id;
+        string? output = null;
 
         try
         {
-            string result = await _service.GetResponse(chatId, message.Text!.Trim());
-            return await _bot.SendMessage(chatId: chatId, text: $"```\n{result}\n```", parseMode: ParseMode.MarkdownV2);
+            output = await _service.GetResponse(message.Chat.Id, message.Text!.Trim());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Ошибка {ex.Message}");
-            return await _bot.SendMessage(chatId: chatId, text: $"Ошибка {ex.Message}");
+            output = $"Ошибка: {ex.Message}";
         }
+        finally
+        {
+            _logger.LogWarning(output);
+        }
+
+        return await _bot.SendMessage(message.Chat, $"```\n{output}\n```", parseMode: ParseMode.MarkdownV2);
     }
 
     #endregion
